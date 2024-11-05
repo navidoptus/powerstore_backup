@@ -10,7 +10,7 @@ This repository contains a PowerShell script that automates the daily cloning, N
 - [Prerequisites](#prerequisites)
 - [Script Execution Flow](#script-execution-flow)
 - [Setting Up the Script](#setting-up-the-script)
-- [Script Scheduling](#script-scheduling)
+- [Script Scheduling on Windows and Linux](#script-scheduling-on-windows-and-linux)
 - [IP Address Requirement](#ip-address-requirement)
 - [Script Code](#script-code)
 - [Final Notes](#final-notes)
@@ -36,18 +36,23 @@ This script provides a fully automated solution for cloning and preparing NAS se
 
 ## Prerequisites
 
-1. **PowerStore API Access**:
-   - Access to PowerStore’s REST API endpoint with valid credentials.
+1. **PowerShell Environment**:
+   - Ensure PowerShell is installed on the server that will run the script. (PowerShell is standard on Windows; on Linux, PowerShell Core may need to be installed.)
 
-2. **Server for Script Execution**:
-   - A Windows server with PowerShell installed, or a Linux server (requires script adaptation).
-   - Network connectivity to PowerStore's management IP.
+2. **Server with Network Access**:
+   - The server executing the script must have network access to your PowerStore appliance and any required firewall or routing permissions.
 
-3. **Data Domain Appliance**:
-   - Ensure your Data Domain appliance is NDMP-compatible and can connect to the PowerStore NAS.
+3. **PowerStore API Access**:
+   - Confirm that you have the **PowerStore REST API credentials** and endpoint information. The script requires API credentials for authentication, so be sure to test connectivity to the PowerStore API from this server.
 
-4. **Optional Static IP Address**:
-   - An IP address in the backup VLAN, if required for connectivity between the NAS clone and the Data Domain appliance.
+4. **PowerStore API Permissions**:
+   - The API user account must have permission to perform NAS clone creation, NDMP configuration, and deletion operations.
+
+5. **Data Domain Configuration**:
+   - Verify that your Data Domain appliance is configured to receive NDMP backups from PowerStore.
+
+6. **Valid IP Address (if needed)**:
+   - If your Data Domain appliance requires an IP for the NAS clone, ensure that an IP from the correct VLAN is available and included in the script.
 
 ---
 
@@ -76,10 +81,58 @@ This script provides a fully automated solution for cloning and preparing NAS se
 
 ---
 
-## Script Scheduling
+## Script Scheduling on Windows and Linux
 
-- **Windows**: Use Task Scheduler to create a new daily task, selecting the PowerShell script as the program.
-- **Linux**: Adapt the script for Bash and schedule with `cron` for daily execution.
+### Windows: Using Task Scheduler
+
+1. **Open Task Scheduler**:
+   - Open **Task Scheduler** on the server where the script will run.
+
+2. **Create a New Task**:
+   - Click on **Create Task** and name it (e.g., "Daily PowerStore NAS Backup").
+
+3. **Set Trigger**:
+   - Go to the **Triggers** tab, click **New**, and set the trigger to run **Daily**.
+   - Specify the start time and any recurrence options needed.
+
+4. **Set Action**:
+   - Go to the **Actions** tab, click **New**, and set the action to start a program.
+   - For the **Program/script** field, enter `powershell`.
+   - In the **Add arguments (optional)** field, enter the path to your script. For example:
+     ```plaintext
+     -File "C:\path\to\your\script.ps1"
+     ```
+
+5. **Configure Settings**:
+   - In the **Settings** tab, enable options like **Allow task to be run on demand** and **Run task as soon as possible after a scheduled start is missed** if needed.
+
+6. **Save the Task**:
+   - Click **OK** to save the task. Ensure it’s set to run with the highest privileges if necessary.
+
+7. **Test**:
+   - Run the task manually from Task Scheduler to confirm it works as expected.
+
+### Linux: Using Cron Job
+
+1. **Make the Script Executable**:
+   - Run the following command to make the script executable:
+     ```bash
+     chmod +x /path/to/your/script.ps1
+     ```
+
+2. **Schedule with Cron**:
+   - Open the cron configuration for editing:
+     ```bash
+     crontab -e
+     ```
+   - Add a new line to run the script daily. For example, to run it at midnight:
+     ```plaintext
+     0 0 * * * /usr/bin/pwsh /path/to/your/script.ps1
+     ```
+   - Ensure you’re using the correct path to `pwsh` if using PowerShell Core on Linux.
+
+3. **Save and Exit**:
+   - Save the cron job. The script will now run daily at the specified time.
 
 ---
 
