@@ -1,6 +1,6 @@
 # PowerStore NAS Cloning and Automated Backup Script to Data Domain
 
-This repository contains a PowerShell script that automates the daily cloning, NDMP backup preparation, and cleanup for a PowerStore NAS server at a Disaster Recovery (DR) site. The backup is performed to a Data Domain appliance, with an optional IP assignment based on network configuration.
+This repository contains a PowerShell script that automates the daily cloning, NDMP backup preparation, and cleanup for a PowerStore NAS server at a Disaster Recovery (DR) site. The backup is performed to a Data Domain appliance, with clones automatically deleted after a 35-day retention period.
 
 ---
 
@@ -18,14 +18,13 @@ This repository contains a PowerShell script that automates the daily cloning, N
 ---
 
 ## Overview
-This script provides a fully automated solution for cloning and preparing NAS servers at the DR site for daily backups, targeting a Data Domain appliance. The workflow includes cloning, NDMP backup setup, and cleanup to ensure minimal storage usage.
+This script provides a fully automated solution for cloning and preparing NAS servers at the DR site for daily backups, targeting a Data Domain appliance. The workflow includes cloning, NDMP backup setup, and automated clone deletion after 35 days to optimize storage use.
 
 ### Key Features
 - **Automated Daily NAS Cloning**: Creates a new clone every day for backup purposes.
 - **Optional IP Assignment**: Assigns an IP to the clone if required for Data Domain connectivity.
 - **NDMP Backup Configuration**: Sets up NDMP on the clone, enabling backup access to Data Domain.
-- **Clone Deletion after Backup**: Removes the clone after backup to save space.
-- **Retention Policy for Snapshots**: Deletes snapshots older than 35 days.
+- **Automated Clone Deletion**: Deletes clones older than 35 days to maintain storage efficiency.
 
 ---
 
@@ -55,7 +54,7 @@ This script provides a fully automated solution for cloning and preparing NAS se
 ## Script Execution Flow
 
 1. **Daily NAS Cloning**:
-   - The script generates a read-write clone of the DR NAS server each day for backup.
+   - The script generates a writable, independent clone of the DR NAS server each day for backup.
 
 2. **Optional IP Assignment**:
    - Assigns an IP address in the backup VLAN if the Data Domain appliance requires network access to the clone. This step can be skipped if direct connectivity is available without an IP.
@@ -63,11 +62,8 @@ This script provides a fully automated solution for cloning and preparing NAS se
 3. **NDMP Configuration for Backup**:
    - Configures NDMP access on the clone to enable the Data Domain appliance to initiate backups.
 
-4. **Clone Deletion after Backup**:
-   - The clone is deleted after the backup process completes to save storage space.
-
-5. **Retention Policy for Snapshots**:
-   - Deletes snapshots of the NAS server that are older than 30 days.
+4. **Automated Clone Deletion**:
+   - Any clones older than the 35-day retention period are automatically deleted to free up storage.
 
 ---
 
@@ -94,6 +90,8 @@ In this setup, an additional IP address for the NAS clone may or may not be nece
 - **IP Not Required**: If the Data Domain appliance is directly connected to the PowerStore NAS or is on the same storage network, you can skip the IP assignment.
 - **IP Required**: If the Data Domain appliance requires network access to the clone (e.g., if they are in separate VLANs), an IP address in the backup VLAN should be assigned to the clone.
 
+Review your network configuration to determine if an IP address is needed, and adjust the script as appropriate.
+
 ---
 
 ## Script Code
@@ -104,7 +102,7 @@ Below is the full PowerShell script that automates NAS cloning, NDMP backup conf
 <#
 Author: Navid Rastegani
 Email: navid.rastegani@optus.com.au
-Description: This script automates the daily cloning, NDMP backup configuration, and deletion of a PowerStore NAS server clone at the DR site. A retention policy is applied to automatically delete any NAS snapshots older than 30 days.
+Description: This script automates the daily cloning, NDMP backup configuration, and deletion of a PowerStore NAS server clone at the DR site. Clones are automatically deleted after a 35-day retention period to manage storage.
 #>
 
 # PowerStore API Endpoint and Credentials
@@ -117,7 +115,7 @@ $DR_NAS_Server_ID = "<DR_NAS_Server_ID>"          # Replace with NAS server ID a
 $CloneName = "Backup_Clone_$(Get-Date -Format 'yyyyMMdd')" # Clone name with date for easy identification
 $NDMP_User = "<NDMP_User>"                        # NDMP username for backup access
 $NDMP_Password = "<NDMP_Password>"                # NDMP password for backup access
-$RetentionDays = 30                               # Retention period in days
+$RetentionDays = 35                               # Retention period in days
 
 # Encode credentials for PowerStore API authentication
 $authInfo = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes("$User:$Password"))
@@ -150,33 +148,23 @@ function Configure-NDMP {
     return $response
 }
 
-# Function: Delete the NAS clone
-function Delete-NASClone {
-    param ($cloneID)
-    $uri = "$PowerStoreAPI/nas_server/$cloneID"
-    
-    # Send DELETE request to PowerStore API to delete the clone
-    $response = Invoke-RestMethod -Uri $uri -Method Delete -Headers @{Authorization = "Basic $authInfo"}
-    return $response
-}
-
-# Function: Delete Snapshots Older Than Retention Period
-function Delete-OldSnapshots {
+# Function: Delete Clones Older Than Retention Period
+function Delete-OldClones {
     param ($nasServerID, $retentionDays)
-    $uri = "$PowerStoreAPI/snapshot?parent_id=$nasServerID"
+    $uri = "$PowerStoreAPI/nas_server"
     
-    # Get all snapshots for the NAS server
-    $snapshots = Invoke-RestMethod -Uri $uri -Method Get -Headers @{Authorization = "Basic $authInfo"}
+    # Get all clones for the NAS server
+    $clones = Invoke-RestMethod -Uri $uri -Method Get -Headers @{Authorization = "Basic $authInfo"}
 
-    # Filter snapshots older than the retention period
+    # Filter clones older than the retention period
     $expiryDate = (Get-Date).AddDays(-$retentionDays)
-    $oldSnapshots = $snapshots | Where-Object { $_.creation_timestamp -lt $expiryDate }
+    $oldClones = $clones | Where-Object { $_.creation_timestamp -lt $expiryDate }
 
-    # Delete each old snapshot
-    foreach ($snapshot in $oldSnapshots) {
-        $snapshotUri = "$PowerStoreAPI/snapshot/$($snapshot.id)"
-        Write-Output "Deleting snapshot with ID: $($snapshot.id)"
-        Invoke-RestMethod -Uri $snapshotUri -Method Delete -Headers @{Authorization = "Basic $authInfo"}
+    # Delete each old clone
+    foreach ($clone in $oldClones) {
+        $cloneUri = "$PowerStoreAPI/nas_server/$($clone.id)"
+        Write-Output "Deleting clone with ID: $($clone.id)"
+        Invoke-RestMethod -Uri $cloneUri -Method Delete -Headers @{Authorization = "Basic $authInfo"}
     }
 }
 
@@ -194,15 +182,10 @@ try {
 
     # Perform your backup operations here (assuming your NDMP client initiates the backup using the clone ID)
 
-    # Step 3: Delete the clone after backup
-    Write-Output "Deleting the NAS clone after backup..."
-    $deleteCloneResponse = Delete-NASClone -cloneID $cloneID
-    Write-Output "Clone deleted successfully."
-
-    # Step 4: Delete snapshots older than the retention period
-    Write-Output "Applying retention policy for snapshots older than $RetentionDays days..."
-    Delete-OldSnapshots -nasServerID $DR_NAS_Server_ID -retentionDays $RetentionDays
-    Write-Output "Old snapshots deleted according to retention policy."
+    # Step 3: Delete clones older than the retention period
+    Write-Output "Applying retention policy for clones older than $RetentionDays days..."
+    Delete-OldClones -nasServerID $DR_NAS_Server_ID -retentionDays $RetentionDays
+    Write-Output "Old clones deleted according to retention policy."
 
     Write-Output "Daily NAS cloning, backup, and cleanup completed successfully."
 
