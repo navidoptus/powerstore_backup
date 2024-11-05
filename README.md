@@ -94,8 +94,6 @@ In this setup, an additional IP address for the NAS clone may or may not be nece
 - **IP Not Required**: If the Data Domain appliance is directly connected to the PowerStore NAS or is on the same storage network, you can skip the IP assignment.
 - **IP Required**: If the Data Domain appliance requires network access to the clone (e.g., if they are in separate VLANs), an IP address in the backup VLAN should be assigned to the clone.
 
-Review your network configuration to determine if an IP address is needed, and adjust the script as appropriate.
-
 ---
 
 ## Script Code
