@@ -86,6 +86,11 @@ This script provides a fully automated solution for cloning and preparing NAS se
 
 Below is the full PowerShell script that automates NAS cloning and NDMP backup configuration. Replace all placeholder values as instructed in the script comments.
 
+Final Notes
+Testing: Before scheduling, run the script manually to verify functionality.
+Error Handling: Review and adjust error-handling as needed.
+Automation: Once verified, automate the script with Task Scheduler or cron for consistent execution.
+
 ```powershell
 <#
 Author: Navid Rastegani
