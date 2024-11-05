@@ -25,7 +25,7 @@ This script provides a fully automated solution for cloning and preparing NAS se
 - **Optional IP Assignment**: Assigns an IP to the clone if required for Data Domain connectivity.
 - **NDMP Backup Configuration**: Sets up NDMP on the clone, enabling backup access to Data Domain.
 - **Clone Deletion after Backup**: Removes the clone after backup to save space.
-- **Retention Policy for Snapshots**: Deletes snapshots older than 30 days.
+- **Retention Policy for Snapshots**: Deletes snapshots older than 35 days.
 
 ---
 
