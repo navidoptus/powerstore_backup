@@ -1,8 +1,9 @@
 # PowerStore NAS Backup Automation to Data Domain
 
-![PowerStore NAS Backup](docs/images/banner.png)
-
 A PowerShell-based automation solution for backing up PowerStore NAS servers to a Data Domain appliance. Choose from two backup options: **NAS server cloning** or **file system snapshotting**, both configured to automate NDMP access and apply a 35-day retention policy.
+
+**Author**: Navid Rastegani  
+**Company**: Optus
 
 ---
 
@@ -20,6 +21,7 @@ A PowerShell-based automation solution for backing up PowerStore NAS servers to 
 - [Future Enhancements](#future-enhancements)
 - [Contributing](#contributing)
 - [License](#license)
+- [Author](#author)
 
 ---
 
@@ -122,7 +124,6 @@ powerstore_backup/
 │   ├── Snapshot_Backup_Script.ps1 # Script for file system snapshots option
 ├── README.md                      # Main project documentation
 ├── docs/
-│   ├── images/                    # Folder for screenshots or images
 │   └── installation.md           # Detailed setup guide
 ```
 
@@ -168,3 +169,13 @@ Contributions are welcome! If you'd like to improve the project, please submit a
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Author
+
+**Navid Rastegani**  
+*Sr. Solution Designer*  
+Optus
+
+---
+
+*Developed and maintained by Optus Storage Engineering Team*
